@@ -18,6 +18,7 @@ public class GameModel {
     private GameState currentState = GameState.MENU;
     private MapTheme currentTheme;
 
+    // Constants to avoid Magic Numbers [cite: 28]
     public static final int MAP_WIDTH = 1200;
     public static final int MAP_HEIGHT = 900;
     public static final int TILE_SIZE = 50;
@@ -27,50 +28,61 @@ public class GameModel {
 
     public GameModel() {}
 
-    private void initMap(int mapId) {
-        obstacles = new ArrayList<>();
+    // Mandatory Task 4: Remove Duplication (Общий метод сброса) [cite: 69]
+    private void resetMapAndBorders() {
+        int mapWidth = map.length;      // Rename w -> mapWidth
+        int mapHeight = map[0].length;  // Rename h -> mapHeight
 
-        // Очистка
-        for(int x = 0; x < map.length; x++) {
-            for(int y = 0; y < map[0].length; y++) {
+        for(int x = 0; x < mapWidth; x++) {
+            for(int y = 0; y < mapHeight; y++) {
                 map[x][y] = 0;
                 // Границы карты
-                if (x == 0 || x == map.length - 1 || y == 0 || y == map[0].length - 1) {
+                if (x == 0 || x == mapWidth - 1 || y == 0 || y == mapHeight - 1) {
                     map[x][y] = 1;
                 }
             }
         }
+    }
 
-        // Карта 1: Лето (Открытая, ЧУТЬ БОЛЬШЕ ПРЕПЯТСТВИЙ)
+    private void initMap(int mapId) {
+        obstacles = new ArrayList<>();
+        resetMapAndBorders(); // Reused code
+
         if (mapId == 1) {
             currentTheme = MapTheme.SUMMER;
-            // Старые блоки
-            map[5][5] = 1; map[6][5] = 1;
-            map[15][5] = 1; map[15][6] = 1;
-            map[10][10] = 1; map[11][10] = 1; map[12][10] = 1;
-            map[5][12] = 1;
-            map[18][12] = 1; map[19][12] = 1;
-            map[8][3] = 1; map[8][4] = 1;
-
-            // НОВЫЕ ПРЕПЯТСТВИЯ (добавлены две небольшие стены)
-            map[3][8] = 1;
-            map[3][9] = 1;
-
-            map[16][15] = 1;
-            map[17][15] = 1;
-        }
-        // Карта 2: Пустыня (Узкая)
-        else if (mapId == 2) {
+            setupSummerMap();
+        } else if (mapId == 2) {
             currentTheme = MapTheme.DESERT;
-            for (int x = 4; x < map.length - 4; x += 4) {
-                for (int y = 3; y < map[0].length - 3; y+=3) {
-                    map[x][y] = 1;
-                }
-            }
-            map[10][8] = 1; map[11][8] = 1; map[12][8] = 1;
+            setupDesertMap();
         }
 
-        // Преобразуем массив карты в список прямоугольников (Hitboxes)
+        buildHitboxes();
+    }
+
+    // Extract Method: Логика карт вынесена отдельно [cite: 22]
+    private void setupSummerMap() {
+        // Старые блоки
+        map[5][5] = 1; map[6][5] = 1;
+        map[15][5] = 1; map[15][6] = 1;
+        map[10][10] = 1; map[11][10] = 1; map[12][10] = 1;
+        map[5][12] = 1;
+        map[18][12] = 1; map[19][12] = 1;
+        map[8][3] = 1; map[8][4] = 1;
+        // Новые препятствия
+        map[3][8] = 1; map[3][9] = 1;
+        map[16][15] = 1; map[17][15] = 1;
+    }
+
+    private void setupDesertMap() {
+        for (int x = 4; x < map.length - 4; x += 4) {
+            for (int y = 3; y < map[0].length - 3; y+=3) {
+                map[x][y] = 1;
+            }
+        }
+        map[10][8] = 1; map[11][8] = 1; map[12][8] = 1;
+    }
+
+    private void buildHitboxes() {
         for(int x = 0; x < map.length; x++) {
             for(int y = 0; y < map[0].length; y++) {
                 if (map[x][y] == 1) {
@@ -119,21 +131,37 @@ public class GameModel {
         currentState = GameState.RUNNING;
     }
 
+    // Mandatory Task 2: Update logic separated from huge if/else blocks [cite: 58]
     public void updateGame() {
         if (currentState != GameState.RUNNING) return;
 
+        updateEntities();
+        handleMovements();
+        handleAIShooting();
+        checkCollisions();
+        cleanupEntities();
+        checkGameStatus();
+    }
+
+    private void updateEntities() {
         bullets.forEach(Bullet::update);
         explosions.forEach(Explosion::update);
+    }
 
+    private void handleMovements() {
         if(playerTank.isAlive() && playerTank.isMovingForward()) {
             processTankMovement(playerTank, 5);
         }
-
         for (Tank enemy : enemies) {
             enemy.update();
             if (enemy.isAlive() && enemy.isMovingForward()) {
                 processTankMovement(enemy, 3);
             }
+        }
+    }
+
+    private void handleAIShooting() {
+        for (Tank enemy : enemies) {
             if (enemy.isAlive() && enemy.canShoot() && Math.random() < 0.05) {
                 if (isPlayerInLineOfSight(enemy, playerTank, 500)) {
                     Bullet newBullet = enemy.shoot();
@@ -141,13 +169,15 @@ public class GameModel {
                 }
             }
         }
+    }
 
-        checkCollisions();
-
+    private void cleanupEntities() {
         enemies.removeIf(tank -> !tank.isAlive());
         bullets.removeIf(bullet -> !bullet.isAlive());
         explosions.removeIf(exp -> !exp.isAlive());
+    }
 
+    private void checkGameStatus() {
         if (score >= initialEnemyCount && initialEnemyCount > 0) {
             currentState = GameState.VICTORY;
         }

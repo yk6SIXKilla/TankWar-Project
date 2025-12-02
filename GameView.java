@@ -33,8 +33,6 @@ public class GameView extends JPanel implements ActionListener {
         infoPanel.add(healthLabel);
 
         menuButton = new JButton("Меню");
-
-        // Кнопка в игре также в нейтральном тоне
         menuButton.setBackground(new Color(100, 100, 100));
         menuButton.setForeground(Color.WHITE);
 
@@ -76,7 +74,6 @@ public class GameView extends JPanel implements ActionListener {
 
         g2d.translate(0, -INFO_PANEL_HEIGHT);
 
-        // Оверлей конца игры
         GameModel.GameState state = model.getCurrentState();
         if (state == GameModel.GameState.DEFEAT || state == GameModel.GameState.VICTORY) {
             g2d.setColor(new Color(0, 0, 0, 200));
@@ -109,11 +106,8 @@ public class GameView extends JPanel implements ActionListener {
             btn.setActionCommand("GO_TO_MENU_FINAL");
             btn.addActionListener(controller);
             btn.setBounds(getWidth()/2 - 200, getHeight()/2, 400, 60);
-
-            // Нейтральный тон кнопки
             btn.setBackground(new Color(100, 100, 100));
             btn.setForeground(Color.WHITE);
-
             add(btn);
             revalidate();
         }
@@ -157,81 +151,72 @@ public class GameView extends JPanel implements ActionListener {
         int x = tank.getX();
         int y = tank.getY();
         int size = Tank.SIZE;
+        int d = tank.getDirection();
 
         AffineTransform oldTransform = g2d.getTransform();
         int centerX = x + size / 2;
         int centerY = y + size / 2;
         double angle = 0;
-        int d = tank.getDirection();
         if (d == 1) angle = Math.toRadians(90);
         else if (d == 2) angle = Math.toRadians(180);
         else if (d == 3) angle = Math.toRadians(270);
 
         g2d.rotate(angle, centerX, centerY);
 
-        Color mainColor = tank.getColor();
-        Color trackColor = new Color(50, 50, 50);
+        Color c = tank.getColor();
 
-        // --- ДЕТАЛИЗИРОВАННЫЙ ДИЗАЙН ---
+        // 1. Гусеницы (Широкие, без подложки)
+        g2d.setColor(new Color(50, 50, 50));
+        g2d.fillRect(x - 8, y, 10, size); // Левая
+        g2d.fillRect(x + size - 2, y, 10, size); // Правая
 
-        int trackWidth = 8; // Ширина гусеницы
+        // Колеса (детализация)
+        g2d.setColor(new Color(80, 80, 80));
+        for (int i = 0; i < 4; i++) {
+            g2d.fillOval(x - 5, y + 4 + i * 10, 4, 4);
+            g2d.fillOval(x + size + 1, y + 4 + i * 10, 4, 4);
+        }
 
-        // 1. Базовая заливка (Темный фон для предотвращения просвечивания)
-        // Заливаем область, включая новые широкие гусеницы
-        g2d.setColor(trackColor.darker().darker());
-        g2d.fillRect(x - trackWidth, y, size + 2 * trackWidth, size);
-
-        // 2. Внешние Гусеницы
-        g2d.setColor(trackColor);
-        g2d.fillRect(x - trackWidth, y, trackWidth, size); // Левая внешняя гусеница
-        g2d.fillRect(x + size, y, trackWidth, size); // Правая внешняя гусеница
-
-        // 3. Корпус
-        g2d.setColor(mainColor.darker());
+        // 2. Корпус (Просто цветной прямоугольник, без теней)
+        g2d.setColor(c);
         g2d.fillRect(x, y + 2, size, size - 4);
 
-        // Детализация на корпусе (светлая часть)
-        g2d.setColor(mainColor.brighter());
-        g2d.fillRect(x + 4, y + 5, size - 8, size - 10);
+        // Детализация на корпусе (чуть светлее центр)
+        g2d.setColor(c.brighter());
+        g2d.fillRect(x + 5, y + 5, size - 10, size - 10);
 
-        // Обводка корпуса
+        // Обводка корпуса (Черная линия)
         g2d.setColor(Color.BLACK);
         g2d.drawRect(x, y + 2, size, size - 4);
 
-        // 4. Детализация гусениц (колеса)
-        g2d.setColor(trackColor.brighter());
-        int wheelCount = 4;
-        for (int i = 0; i < wheelCount; i++) {
-            int yOffset = y + 3 + i * (size / wheelCount);
-            // Левые колеса
-            g2d.fillOval(x - trackWidth + 1, yOffset, 6, 6);
-            // Правые колеса
-            g2d.fillOval(x + size + 1, yOffset, 6, 6);
-        }
+        // 3. Башня
+        int turretSize = size - 10;
+        int turretX = x + 5;
+        int turretY = y + 5;
 
-        // 5. Башня (круг)
-        int turretSize = size - 12;
-        int turretX = x + 6;
-        int turretY = y + 6;
-        g2d.setColor(mainColor.brighter());
+        g2d.setColor(c.brighter()); // Основной цвет башни
         g2d.fillOval(turretX, turretY, turretSize, turretSize);
-        g2d.setColor(Color.BLACK);
-        g2d.drawOval(turretX, turretY, turretSize, turretSize);
 
-        // 6. Пушка (прямоугольник с кончиком)
+        g2d.setColor(Color.BLACK);
+        g2d.drawOval(turretX, turretY, turretSize, turretSize); // Контур
+
+        // 4. Люк
+        g2d.setColor(new Color(30, 30, 30));
+        g2d.fillOval(centerX - 5, centerY - 5, 10, 10);
+
+        // 5. Пушка (Массивная)
+        g2d.setColor(new Color(40, 40, 40));
         int barrelLength = size / 2 + 15;
-        int barrelWidth = 10; // Широкая пушка
 
-        // Основная часть пушки
-        g2d.setColor(new Color(20, 20, 20));
-        g2d.fillRect(centerX - barrelWidth / 2, centerY - barrelLength, barrelWidth, barrelLength);
+        g2d.setStroke(new BasicStroke(10f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
+        g2d.drawLine(centerX, centerY, centerX, centerY - barrelLength);
 
-        // Кончик/Дульный тормоз (добавление черного кончика)
+        // Кончик пушки (Черный)
+        g2d.setStroke(new BasicStroke(12f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
         g2d.setColor(Color.BLACK);
-        int tipHeight = 4;
-        int tipWidth = barrelWidth + 2;
-        g2d.fillRect(centerX - tipWidth / 2, centerY - barrelLength - tipHeight, tipWidth, tipHeight);
+        g2d.drawLine(centerX, centerY - barrelLength - 2, centerX, centerY - barrelLength + 2);
 
+        g2d.setStroke(new BasicStroke(1f));
         g2d.setTransform(oldTransform);
     }
 
