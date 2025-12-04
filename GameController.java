@@ -1,18 +1,17 @@
 import java.awt.event.*;
-import java.awt.Container;
 import javax.swing.JButton;
 
 public class GameController extends KeyAdapter implements ActionListener {
     private GameModel model;
-    private MainApp app;
+    private MainApp application;
     private GameView gameView;
     private MenuView menuView;
 
-    private boolean wPressed, aPressed, sPressed, dPressed;
+    private boolean isWPressed, isAPressed, isSPressed, isDPressed;
 
-    public GameController(GameModel model, MainApp app) {
+    public GameController(GameModel model, MainApp application) {
         this.model = model;
-        this.app = app;
+        this.application = application;
     }
 
     public void setViews(GameView gameView, MenuView menuView) {
@@ -22,53 +21,92 @@ public class GameController extends KeyAdapter implements ActionListener {
     }
 
     @Override
-    public void actionPerformed(ActionEvent e) {
-        String command = e.getActionCommand();
+    public void actionPerformed(ActionEvent event) {
+        String command = event.getActionCommand();
+        handleActionCommand(command);
+    }
 
+    private void handleActionCommand(String command) {
         switch (command) {
             case "START_GAME":
-                int enemyCount = menuView.getEnemyCount();
-                int mapId = menuView.getSelectedMapId();
-                model.initGame(enemyCount, mapId);
-                app.showGameScreen();
+                startNewGame();
                 break;
             case "GO_TO_MENU":
             case "GO_TO_MENU_FINAL":
-                app.showMenuScreen();
+                returnToMenu();
                 break;
             case "EXIT":
-                System.exit(0);
+                exitApplication();
                 break;
         }
     }
 
-    @Override
-    public void keyPressed(KeyEvent e) {
-        if (model.getCurrentState() != GameModel.GameState.RUNNING) return;
-        int key = e.getKeyCode();
-        if (key == KeyEvent.VK_W) wPressed = true;
-        else if (key == KeyEvent.VK_S) sPressed = true;
-        else if (key == KeyEvent.VK_A) aPressed = true;
-        else if (key == KeyEvent.VK_D) dPressed = true;
-        if (key == KeyEvent.VK_SPACE) model.playerShoot();
-        updateMovement();
+    private void startNewGame() {
+        int enemyCount = menuView.getEnemyCount();
+        int mapId = menuView.getSelectedMapId();
+        model.initGame(enemyCount, mapId);
+        application.showGameScreen();
+    }
+
+    private void returnToMenu() {
+        application.showMenuScreen();
+    }
+
+    private void exitApplication() {
+        System.exit(0);
     }
 
     @Override
-    public void keyReleased(KeyEvent e) {
-        int key = e.getKeyCode();
-        if (key == KeyEvent.VK_W) wPressed = false;
-        else if (key == KeyEvent.VK_S) sPressed = false;
-        else if (key == KeyEvent.VK_A) aPressed = false;
-        else if (key == KeyEvent.VK_D) dPressed = false;
-        updateMovement();
+    public void keyPressed(KeyEvent event) {
+        if (model.getCurrentState() != GameModel.GameState.RUNNING) {
+            return;
+        }
+
+        handleKeyPress(event.getKeyCode());
     }
 
-    private void updateMovement() {
-        if (wPressed) { model.setPlayerDirection(0); model.setPlayerMoving(true); }
-        else if (sPressed) { model.setPlayerDirection(2); model.setPlayerMoving(true); }
-        else if (aPressed) { model.setPlayerDirection(3); model.setPlayerMoving(true); }
-        else if (dPressed) { model.setPlayerDirection(1); model.setPlayerMoving(true); }
-        else { model.setPlayerMoving(false); }
+    private void handleKeyPress(int keyCode) {
+        switch (keyCode) {
+            case KeyEvent.VK_W: isWPressed = true; break;
+            case KeyEvent.VK_S: isSPressed = true; break;
+            case KeyEvent.VK_A: isAPressed = true; break;
+            case KeyEvent.VK_D: isDPressed = true; break;
+            case KeyEvent.VK_SPACE: model.playerShoot(); break;
+        }
+        updatePlayerMovement();
+    }
+
+    @Override
+    public void keyReleased(KeyEvent event) {
+        handleKeyRelease(event.getKeyCode());
+    }
+
+    private void handleKeyRelease(int keyCode) {
+        switch (keyCode) {
+            case KeyEvent.VK_W: isWPressed = false; break;
+            case KeyEvent.VK_S: isSPressed = false; break;
+            case KeyEvent.VK_A: isAPressed = false; break;
+            case KeyEvent.VK_D: isDPressed = false; break;
+        }
+        updatePlayerMovement();
+    }
+
+    private void updatePlayerMovement() {
+        if (isWPressed) {
+            setPlayerMovement(0, true);
+        } else if (isSPressed) {
+            setPlayerMovement(2, true);
+        } else if (isAPressed) {
+            setPlayerMovement(3, true);
+        } else if (isDPressed) {
+            setPlayerMovement(1, true);
+        } else {
+            model.setPlayerMoving(false);
+        }
+    }
+
+    private void setPlayerMovement(int direction, boolean isMoving) {
+        model.setPlayerDirection(direction);
+        model.setPlayerMoving(isMoving);
     }
 }

@@ -1,5 +1,8 @@
 public class Explosion extends GameObject {
-    private int lifetime = 12;
+    private static final int INITIAL_LIFETIME = 12;
+    private static final int PHASE_DIVIDER = 2;
+
+    private int lifetime = INITIAL_LIFETIME;
 
     public Explosion(int x, int y) {
         super(x, y, Tank.SIZE, Tank.SIZE);
@@ -14,6 +17,6 @@ public class Explosion extends GameObject {
     }
 
     public int getPhase() {
-        return (12 - lifetime) / 2 + 1;
+        return (INITIAL_LIFETIME - lifetime) / PHASE_DIVIDER + 1;
     }
 }

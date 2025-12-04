@@ -3,14 +3,16 @@ import java.awt.Rectangle;
 
 public class Tank extends GameObject {
     public static final int SIZE = 40;
+    private static final long SHOOT_COOLDOWN_MS = 600;
+    private static final int AI_DIRECTION_CHANGE_PROBABILITY = 2;
+    private static final int BULLET_OFFSET = 15;
+
     private int direction;
     private int health;
     private Color color;
     private boolean isPlayer;
     private long lastShotTime = 0;
-    private final long SHOOT_COOLDOWN = 600;
-
-    private boolean movingForward = false;
+    private boolean isMovingForward = false;
 
     public Tank(int x, int y, int direction, Color color, boolean isPlayer, int initialHealth) {
         super(x, y, SIZE, SIZE);
@@ -18,27 +20,31 @@ public class Tank extends GameObject {
         this.color = color;
         this.isPlayer = isPlayer;
         this.health = initialHealth;
-        this.movingForward = !isPlayer;
+        this.isMovingForward = !isPlayer;
     }
 
     @Override
     public void update() {
-        if (!isPlayer && Math.random() < 0.02) {
-            direction = (int) (Math.random() * 4);
+        if (!isPlayer && Math.random() * 100 < AI_DIRECTION_CHANGE_PROBABILITY) {
+            changeRandomDirection();
         }
     }
 
-    public Rectangle getFutureBounds(int step) {
-        int newX = x;
-        int newY = y;
+    private void changeRandomDirection() {
+        direction = (int) (Math.random() * 4);
+    }
+
+    public Rectangle getFutureBounds(int movementStep) {
+        int futureX = x;
+        int futureY = y;
 
         switch (direction) {
-            case 0: newY -= step; break;
-            case 1: newX += step; break;
-            case 2: newY += step; break;
-            case 3: newX -= step; break;
+            case 0: futureY -= movementStep; break;
+            case 1: futureX += movementStep; break;
+            case 2: futureY += movementStep; break;
+            case 3: futureX -= movementStep; break;
         }
-        return new Rectangle(newX, newY, SIZE, SIZE);
+        return new Rectangle(futureX, futureY, SIZE, SIZE);
     }
 
     public void setPosition(int newX, int newY) {
@@ -46,36 +52,71 @@ public class Tank extends GameObject {
         this.y = newY;
     }
 
-    public boolean canShoot() {
-        return System.currentTimeMillis() - lastShotTime > SHOOT_COOLDOWN;
+    private boolean isShootCooldownPassed() {
+        return System.currentTimeMillis() - lastShotTime > SHOOT_COOLDOWN_MS;
+    }
+
+    public boolean canShoot() { // Изменен модификатор доступа с private на public
+        return isShootCooldownPassed();
     }
 
     public Bullet shoot() {
-        if (!canShoot()) return null;
+        if (!canShoot()) {
+            return null;
+        }
+
         lastShotTime = System.currentTimeMillis();
+        int[] bulletPosition = calculateBulletStartPosition();
 
-        int bX = x + SIZE / 2 - Bullet.SIZE / 2;
-        int bY = y + SIZE / 2 - Bullet.SIZE / 2;
-        int offset = SIZE / 2 + 15;
+        return new Bullet(bulletPosition[0], bulletPosition[1], direction, isPlayer);
+    }
 
-        if (direction == 0) bY -= offset;
-        else if (direction == 1) bX += offset;
-        else if (direction == 2) bY += offset;
-        else if (direction == 3) bX -= offset;
+    private int[] calculateBulletStartPosition() {
+        int bulletX = x + SIZE / 2 - Bullet.SIZE / 2;
+        int bulletY = y + SIZE / 2 - Bullet.SIZE / 2;
 
-        return new Bullet(bX, bY, direction, isPlayer);
+        switch (direction) {
+            case 0: bulletY -= SIZE / 2 + BULLET_OFFSET; break;
+            case 1: bulletX += SIZE / 2 + BULLET_OFFSET; break;
+            case 2: bulletY += SIZE / 2 + BULLET_OFFSET; break;
+            case 3: bulletX -= SIZE / 2 + BULLET_OFFSET; break;
+        }
+
+        return new int[]{bulletX, bulletY};
     }
 
     public void takeDamage() {
         health--;
-        if (health <= 0) isAlive = false;
+        if (health <= 0) {
+            isAlive = false;
+        }
     }
 
-    public int getDirection() { return direction; }
-    public void setDirection(int direction) { this.direction = direction; }
-    public void setMoving(boolean moving) { this.movingForward = moving; }
-    public boolean isMovingForward() { return movingForward; }
-    public int getHealth() { return health; }
-    public Color getColor() { return color; }
-    public boolean isPlayer() { return isPlayer; }
+    public int getDirection() {
+        return direction;
+    }
+
+    public void setDirection(int direction) {
+        this.direction = direction;
+    }
+
+    public void setMoving(boolean moving) {
+        this.isMovingForward = moving;
+    }
+
+    public boolean isMovingForward() {
+        return isMovingForward;
+    }
+
+    public int getHealth() {
+        return health;
+    }
+
+    public Color getColor() {
+        return color;
+    }
+
+    public boolean isPlayer() {
+        return isPlayer;
+    }
 }
